@@ -1,0 +1,68 @@
+#############################
+### TMC Data Science Test ###
+#############################
+
+full_set <- read.csv("test_data.csv", header = TRUE)
+
+full_set_names <- data.frame(full_set[, -1], row.names = full_set[, 1])
+full_set_names$target <- ifelse(full_set_names$target == 1, "Yes", "No") # 1 gets converted to yes, 2 to no
+full_set_names$target <- as.factor(full_set_names$target)
+full_set_names$birth_year <- as.factor(full_set_names$birth_year)
+full_set_names$ideo <- as.factor(full_set_names$ideo)
+full_set_names$employ <- as.factor(full_set_names$employ)
+
+library(tidyr)
+
+scores_known <- drop_na(full_set_names, target) # for setting up training and test sets
+names.scores_known <- as.numeric(as.character(row.names(scores_known)))
+names.scores_unknown <- as.numeric(as.character(row.names(full_set_names[-names.scores_known,])))
+
+# Set up training and test sets
+
+set.seed(1)
+sample <- sample.int(n = nrow(scores_known), size = floor(.5 * nrow(scores_known)), replace = FALSE)
+test <- scores_known[-sample, ]
+train <- scores_known[sample, ]
+
+#############################
+# Decision Tree             #
+#############################
+
+library(tree)
+
+tree.scores_known <- tree(target ~ ., train)
+
+summary(tree.scores_known)
+plot(tree.scores_known) # it's clear we need to prune the tree - one of the leaves is yes regardless of which way it goes.
+text(tree.scores_known, pretty = 0)
+
+prune.scores_known <- prune.misclass(tree.scores_known, best = 5)
+plot(prune.scores_known)
+text(tree.scores_known, pretty = 0)
+
+# Check predictions for both trees - they should be the same
+
+tree.pred <- predict(tree.scores_known, test, type = "class")
+table(tree.pred, test$target)
+(200+214)/492
+
+# We see here that the tree explains 84 percent of the variance - that's pretty good! 
+
+pruned_tree.pred <- predict(tree.scores_known, test, type ="class")
+table(tree.pred, test$target)
+(200 + 214)/492
+
+# Again, we see that the tree explains 84 percent of the variance in the model.
+
+# Prepare for export:
+predict.full_set <- predict(tree.scores_known, full_set_names[names.scores_unknown,], type = "class")
+summary(predict.full_set)
+export.unknown <- data.frame(full_set$key[names.scores_unknown], predict.full_set)
+export.known <- data.frame(full_set$key[names.scores_known], full_set$target[names.scores_known])
+
+# Export files and combine together in Excel
+
+write.csv(export.known, "final_known.csv")
+write.csv(export.unknown, "final_unknown.csv")
+
+
