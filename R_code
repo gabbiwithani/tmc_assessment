@@ -1,11 +1,37 @@
 #############################
-### TMC Data Science Test ###
+### TLC Data Science Test ###
 #############################
 
 full_set <- read.csv("test_data.csv", header = TRUE)
 
+# attach first column as row names and convert applicable variables to factors instead of integers
+# There are some columns that have been coded into what appear to be factors but we weren't given context for what those
+# codes mean. As such, we will convert them into factors but not attempt to rename them as we're not sure what those
+# renamed variables would be. We will rename the "target" variable, assuming that 1 is yes and 2 is no.
+
 full_set_names <- data.frame(full_set[, -1], row.names = full_set[, 1])
 full_set_names$target <- ifelse(full_set_names$target == 1, "Yes", "No") # 1 gets converted to yes, 2 to no
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1910 & full_set_names$birth_year < 1920, "1910s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1920 & full_set_names$birth_year < 1930, "1920s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1930 & full_set_names$birth_year < 1940, "1930s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1940 & full_set_names$birth_year < 1950, "1940s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1950 & full_set_names$birth_year < 1960, "1950s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1960 & full_set_names$birth_year < 1970, "1960s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1970 & full_set_names$birth_year < 1980, "1970s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1980 & full_set_names$birth_year < 1990, "1980s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 1990 & full_set_names$birth_year < 2000, "1990s", 
+                                    full_set_names$birth_year)
+full_set_names$birth_year <- ifelse(full_set_names$birth_year >= 2000 & full_set_names$birth_year < 2010, "2000s", 
+                                    full_set_names$birth_year)
+
 full_set_names$target <- as.factor(full_set_names$target)
 full_set_names$birth_year <- as.factor(full_set_names$birth_year)
 full_set_names$ideo <- as.factor(full_set_names$ideo)
@@ -33,12 +59,19 @@ library(tree)
 tree.scores_known <- tree(target ~ ., train)
 
 summary(tree.scores_known)
-plot(tree.scores_known) # it's clear we need to prune the tree - one of the leaves is yes regardless of which way it goes.
+plot(tree.scores_known)
 text(tree.scores_known, pretty = 0)
+
+# Once we add the text to this tree, it becomes clear that the tree needs some pruning - we have some nodes that don't 
+# make any difference in the end model.
 
 prune.scores_known <- prune.misclass(tree.scores_known, best = 5)
 plot(prune.scores_known)
-text(tree.scores_known, pretty = 0)
+text(prune.scores_known, pretty = 0)
+
+# Some interesting things here! Unsurprisingly, Ds seem more likely to reject the ballot measure than Rs, but the model has
+# even gone into activist_pct in an attempt to classify the unknown variables in the event we don't know the party of the
+# voter.
 
 # Check predictions for both trees - they should be the same
 
@@ -64,5 +97,3 @@ export.known <- data.frame(full_set$key[names.scores_known], full_set$target[nam
 
 write.csv(export.known, "final_known.csv")
 write.csv(export.unknown, "final_unknown.csv")
-
-
